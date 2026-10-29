@@ -8,6 +8,9 @@
   MINISIGHT_API_KEY    访问密钥（向 MiniSight 官方获取）
   MINISIGHT_ACCESS_TOKEN 可选，直接使用 JWT（调试用）
 
+密钥查找顺序：--key 参数 > 环境变量 MINISIGHT_API_KEY > 密钥文件 ~/.minisight/key
+（推荐把 key 写入密钥文件，一次配置永久生效，不依赖终端会话）
+
 用法示例：
   ms.py weekly                        # 一键本周产业情报周报（招牌场景）
   ms.py search 宁德时代
@@ -32,6 +35,25 @@ DEFAULT_BASE = "https://www.minisight.cn/api/v1"
 DEFAULT_TIMEOUT = 30
 
 
+def _load_key(explicit=None):
+    """密钥查找顺序：显式参数 > 环境变量 > ~/.minisight/key 密钥文件。"""
+    if explicit:
+        return explicit
+    env = os.environ.get("MINISIGHT_API_KEY")
+    if env:
+        return env
+    key_file = os.path.join(os.path.expanduser("~"), ".minisight", "key")
+    try:
+        with open(key_file, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#"):
+                    return line
+    except OSError:
+        pass
+    return None
+
+
 def http_get(path, params=None, base=None, key=None, token=None, timeout=DEFAULT_TIMEOUT, soft=False):
     base = (base or os.environ.get("MINISIGHT_API_BASE") or DEFAULT_BASE).rstrip("/")
     url = base + "/" + path.lstrip("/")
@@ -42,7 +64,7 @@ def http_get(path, params=None, base=None, key=None, token=None, timeout=DEFAULT
     req = urllib.request.Request(url, method="GET")
     req.add_header("Accept", "application/json")
     req.add_header("User-Agent", "minisight-skill/1.1")
-    key = key or os.environ.get("MINISIGHT_API_KEY")
+    key = _load_key(key)
     token = token or os.environ.get("MINISIGHT_ACCESS_TOKEN")
     if key:
         req.add_header("X-API-Key", key)
@@ -56,7 +78,7 @@ def http_get(path, params=None, base=None, key=None, token=None, timeout=DEFAULT
             detail = e.read().decode("utf-8", "replace")[:500]
         except Exception:
             detail = ""
-        hint = {401: "密钥缺失或无效（检查 MINISIGHT_API_KEY）",
+        hint = {401: "密钥缺失或无效（配置方式见 README：把 key 写入 ~/.minisight/key 文件，或设置 MINISIGHT_API_KEY）",
                 403: "无权限访问该数据",
                 404: "接口或资源不存在（细节见 references/api-*.md）",
                 429: "免费额度已用完。明日自动恢复；完整数据与画布功能（连线推演/报告生成）请到 minisight.cn 注册使用"}.get(e.code, "")
@@ -155,7 +177,7 @@ def build_parser():
     # 使 `ms.py search X --base ...` 与 `ms.py --base ... search X` 都合法
     glob = argparse.ArgumentParser(add_help=False)
     glob.add_argument("--base", help="API 根地址（默认读 MINISIGHT_API_BASE）")
-    glob.add_argument("--key", help="API Key（默认读 MINISIGHT_API_KEY）")
+    glob.add_argument("--key", help="API Key（默认依次读环境变量与 ~/.minisight/key 文件）")
     glob.add_argument("--token", help="JWT（默认读 MINISIGHT_ACCESS_TOKEN）")
     glob.add_argument("--timeout", type=int, default=DEFAULT_TIMEOUT)
     glob.add_argument("--raw", action="store_true", help="输出单行 JSON")

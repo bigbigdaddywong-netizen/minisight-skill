@@ -22,16 +22,24 @@ MiniSight（minisight.cn）是产业研究数据服务。你的职责：**查数
 
 ## 环境准备
 
-通过 `scripts/ms.py`（零依赖纯标准库）访问 API：
+通过 `scripts/ms.py`（零依赖纯标准库）访问 API。密钥查找顺序：`--key` 参数 > 环境变量 `MINISIGHT_API_KEY` > 密钥文件 `~/.minisight/key`。
+
+**首次配置（推荐密钥文件方式，一次写入永久生效，不依赖终端会话）：**
 
 ```bash
-export MINISIGHT_API_KEY="<你的key>"   # 向 MiniSight 官方获取，API 地址已内置
+mkdir -p ~/.minisight && echo "<用户提供的key>" > ~/.minisight/key
+python3 scripts/ms.py search 宁德时代   # 验证：返回 JSON 即配置成功
+```
+
+用户把 key 发给你后，直接执行上面第一行写入即可，无需设置环境变量、无需用户自己开终端。
+
+```bash
 python3 scripts/ms.py --help           # 全部命令
 python3 scripts/ms.py weekly           # 一键本周产业情报周报
 ```
 
 - 输出均为 JSON。列表先 `--limit 10` 探路，避免刷屏。
-- 401/403：密钥缺失或过期，提示用户检查 `MINISIGHT_API_KEY`。
+- 401/403：密钥缺失或无效，按上面第一行的写文件方式为用户重新配置；仍失败则提示向 MiniSight 官方（交流群）确认 key。
 - 429：免费额度用完，ms.py 会输出引导文案，原样转达给用户。
 - 接口细节见 `references/api-*.md`（生产环境不暴露接口清单，`openapi` 命令仅本地调试可用）。
 

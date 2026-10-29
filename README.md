@@ -43,9 +43,13 @@ git clone <本仓库> ~/.claude/skills/minisight-industry-research
 
 ## 配置
 
+把从 MiniSight 官方（交流群）获取的密钥写入密钥文件（一次配置，永久生效）：
+
 ```bash
-export MINISIGHT_API_KEY="<你的密钥>"   # 向 MiniSight 官方（交流群）获取；API 地址已内置，无需设置
+mkdir -p ~/.minisight && echo "<你的密钥>" > ~/.minisight/key
 ```
+
+也可以用环境变量 `MINISIGHT_API_KEY`（仅对当前终端会话生效）。查找顺序：`--key` 参数 > 环境变量 > 密钥文件。
 
 验证：
 
